@@ -34,7 +34,7 @@ const Register = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-black px-4">
       <div className="w-full max-w-md bg-gray-900 p-8 rounded-lg shadow-2xl">
-        <h1 className="text-4xl font-bold text-red-600 text-center mb-2">NETFLIX</h1>
+        <h1 className="text-4xl font-bold text-red-600 text-center mb-2">Cinevo</h1>
         <h2 className="text-2xl font-semibold text-white text-center mb-6">Create Account</h2>
 
         {error && (
@@ -54,7 +54,7 @@ const Register = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-4 py-2 bg-gray-800 text-white border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600"
-              placeholder="John Doe"
+              placeholder="Enter your full name"
               disabled={isLoading}
               required
             />
@@ -70,7 +70,7 @@ const Register = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2 bg-gray-800 text-white border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600"
-              placeholder="you@example.com"
+              placeholder="Enter your email"
               disabled={isLoading}
               required
             />

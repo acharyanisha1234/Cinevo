@@ -34,7 +34,7 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-black px-4">
       <div className="w-full max-w-md bg-gray-900 p-8 rounded-lg shadow-2xl">
-        <h1 className="text-4xl font-bold text-red-600 text-center mb-2">NETFLIX</h1>
+        <h1 className="text-4xl font-bold text-red-600 text-center mb-2">Cinevo</h1>
         <h2 className="text-2xl font-semibold text-white text-center mb-6">Sign In</h2>
 
         {error && (
