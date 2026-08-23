@@ -1,7 +1,7 @@
 import React from 'react';
 
 const Home = () => {
-  // Dummy movie data
+  // Dummy movie data (same as before, but you can change titles)
   const movies = [
     { id: 1, title: 'Stranger Things', overview: 'A group of kids uncover supernatural mysteries.' },
     { id: 2, title: 'The Witcher', overview: 'A monster hunter struggles to find his place.' },
@@ -15,27 +15,38 @@ const Home = () => {
     { id: 10, title: 'The Mandalorian', overview: 'A lone bounty hunter in the Star Wars galaxy.' },
   ];
 
+  const heroMovie = {
+    id: 999,
+    title: 'Featured Movie',
+    overview: 'A breathtaking journey through space and time. Watch the trailer now.',
+  };
+
   return (
     <div className="bg-black min-h-screen text-white">
       {/* Hero Section */}
-      <div className="relative h-[80vh] w-full">
+      <div className="relative w-full h-[85vh]">
         <div
-          className="absolute inset-0 bg-cover bg-center opacity-80"
+          className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: `url(https://picsum.photos/seed/hero/1280/720)`,
+            backgroundImage: `url(https://picsum.photos/seed/hero/1920/1080)`,
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
-        <div className="relative z-10 flex flex-col justify-center h-full px-8 max-w-2xl">
-          <h1 className="text-4xl md:text-6xl font-bold">Featured Movie</h1>
-          <p className="text-gray-300 text-sm md:text-base mt-4">
-            This is a placeholder hero banner. Tomorrow you can replace it with real data from TMDB API.
+        {/* Dark gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+
+        <div className="relative z-10 flex flex-col justify-center h-full px-8 md:px-16 max-w-3xl">
+          <h1 className="text-5xl md:text-7xl font-extrabold leading-tight">
+            {heroMovie.title}
+          </h1>
+          <p className="text-gray-300 text-base md:text-lg mt-4 max-w-xl">
+            {heroMovie.overview}
           </p>
-          <div className="flex gap-4 mt-6">
-            <button className="bg-white text-black px-6 py-2 rounded font-semibold hover:bg-gray-200">
-              ▶ Play
+          <div className="flex flex-wrap gap-4 mt-6">
+            <button className="bg-white text-black px-8 py-3 rounded-md font-semibold text-lg hover:bg-gray-200 transition flex items-center gap-2">
+              <span>▶</span> Play
             </button>
-            <button className="bg-gray-500/50 text-white px-6 py-2 rounded font-semibold hover:bg-gray-500/70">
+            <button className="bg-gray-600/70 text-white px-8 py-3 rounded-md font-semibold text-lg hover:bg-gray-600 transition">
               More Info
             </button>
           </div>
@@ -43,54 +54,38 @@ const Home = () => {
       </div>
 
       {/* Movie Rows */}
-      <div className="relative z-10 -mt-20 pb-10">
-        {/* Row 1 */}
-        <div className="px-4 py-2">
-          <h2 className="text-xl font-semibold mb-2">🔥 Trending Now</h2>
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-            {movies.slice(0, 5).map((movie) => (
-              <div key={movie.id} className="flex-shrink-0 w-40">
-                <img
-                  src={`https://picsum.photos/seed/${movie.id}/300/450`}
-                  alt={movie.title}
-                  className="rounded-md hover:scale-105 transition duration-200"
-                />
-              </div>
-            ))}
+      <div className="relative z-10 -mt-20 px-4 md:px-8 pb-10 space-y-8">
+        {[
+          { title: '🔥 Trending Now', movies: movies.slice(0, 5) },
+          { title: '⭐ Popular Movies', movies: movies.slice(3, 8) },
+          { title: '🏆 Top Rated', movies: movies.slice(5, 10) },
+        ].map((row, idx) => (
+          <div key={idx}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-2xl font-semibold">{row.title}</h2>
+              <button className="text-sm text-gray-400 hover:text-white transition">
+                See All →
+              </button>
+            </div>
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-4">
+              {row.movies.map((movie) => (
+                <div
+                  key={movie.id}
+                  className="flex-shrink-0 w-44 md:w-52 transition transform hover:scale-105 duration-200 cursor-pointer"
+                >
+                  <img
+                    src={`https://picsum.photos/seed/${movie.id + idx * 100}/300/450`}
+                    alt={movie.title}
+                    className="w-full rounded-lg shadow-lg"
+                  />
+                  <p className="mt-2 text-sm text-gray-300 text-center truncate">
+                    {movie.title}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-
-        {/* Row 2 */}
-        <div className="px-4 py-2">
-          <h2 className="text-xl font-semibold mb-2">Popular Movies</h2>
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-            {movies.slice(3, 8).map((movie) => (
-              <div key={movie.id} className="flex-shrink-0 w-40">
-                <img
-                  src={`https://picsum.photos/seed/${movie.id + 100}/300/450`}
-                  alt={movie.title}
-                  className="rounded-md hover:scale-105 transition duration-200"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Row 3 */}
-        <div className="px-4 py-2">
-          <h2 className="text-xl font-semibold mb-2">Top Rated</h2>
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-            {movies.slice(5, 10).map((movie) => (
-              <div key={movie.id} className="flex-shrink-0 w-40">
-                <img
-                  src={`https://picsum.photos/seed/${movie.id + 200}/300/450`}
-                  alt={movie.title}
-                  className="rounded-md hover:scale-105 transition duration-200"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   );
