@@ -109,6 +109,10 @@ const MovieRow = ({ title, movies, seeAllLink = '#', loading = false }) => {
               ? `${IMAGE_BASE}${movie.poster_path}` 
               : fallbackImage;
 
+            // ✅ FIX: Safely convert vote_average to number
+            const rating = Number(movie.vote_average);
+            const isValidRating = !isNaN(rating) && rating > 0;
+
             return (
               <Link
                 key={movie.id}
@@ -130,14 +134,17 @@ const MovieRow = ({ title, movies, seeAllLink = '#', loading = false }) => {
                     <h3 className="text-white font-semibold text-sm truncate">
                       {movie.title || movie.name}
                     </h3>
-                    {movie.vote_average && (
+                    
+                    {/* ✅ Fixed rating render */}
+                    {isValidRating && (
                       <div className="flex items-center gap-1 text-sm">
                         <span className="text-yellow-400">★</span>
                         <span className="text-white">
-                          {movie.vote_average.toFixed(1)}
+                          {rating.toFixed(1)}
                         </span>
                       </div>
                     )}
+                    
                     <button className="mt-1 bg-white/20 backdrop-blur-sm text-white text-xs px-3 py-1 rounded-full hover:bg-white/30 transition w-fit">
                       Play
                     </button>
