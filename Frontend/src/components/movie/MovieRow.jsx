@@ -109,7 +109,7 @@ const MovieRow = ({ title, movies, seeAllLink = '#', loading = false }) => {
               ? `${IMAGE_BASE}${movie.poster_path}` 
               : fallbackImage;
 
-            // ✅ FIX: Safely convert vote_average to number
+            // Safely convert vote_average to number
             const rating = Number(movie.vote_average);
             const isValidRating = !isNaN(rating) && rating > 0;
 
@@ -135,7 +135,6 @@ const MovieRow = ({ title, movies, seeAllLink = '#', loading = false }) => {
                       {movie.title || movie.name}
                     </h3>
                     
-                    {/* ✅ Fixed rating render */}
                     {isValidRating && (
                       <div className="flex items-center gap-1 text-sm">
                         <span className="text-yellow-400">★</span>
