@@ -1,21 +1,27 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+// Register component – user sign-up form
 const Register = () => {
+  // State for form fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { register } = useAuth();
-  const navigate = useNavigate();
+  const [error, setError] = useState('');          // error message to display
+  const [isLoading, setIsLoading] = useState(false); // disables form during request
 
+  const { register } = useAuth();   // registration function from context
+  const navigate = useNavigate();   // for redirect after success
+
+  // Handle form submission
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
+    e.preventDefault();             // prevent page reload
+    setError('');                   // clear previous errors
+    setIsLoading(true);             // show loading state
 
+    // Basic validation: all fields required
     if (!name || !email || !password) {
       setError('All fields are required');
       setIsLoading(false);
@@ -23,9 +29,10 @@ const Register = () => {
     }
 
     try {
-      await register(name, email, password);
-      navigate('/');
+      await register(name, email, password); // call the register method
+      navigate('/');                         // redirect to home on success
     } catch (err) {
+      // Show error from server or fallback message
       setError(err.message || 'Registration failed');
       setIsLoading(false);
     }
@@ -34,9 +41,11 @@ const Register = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-black px-4">
       <div className="w-full max-w-md bg-gray-900 p-8 rounded-lg shadow-2xl">
+        {/* Brand and title */}
         <h1 className="text-4xl font-bold text-red-600 text-center mb-2">Cinevo</h1>
         <h2 className="text-2xl font-semibold text-white text-center mb-6">Create Account</h2>
 
+        {/* Error message display */}
         {error && (
           <div className="bg-red-500/20 border border-red-500 text-red-500 px-4 py-2 rounded mb-4 text-sm">
             {error}
@@ -44,6 +53,7 @@ const Register = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Full name input */}
           <div>
             <label htmlFor="name" className="block text-gray-300 text-sm font-medium mb-1">
               Full Name
@@ -60,6 +70,7 @@ const Register = () => {
             />
           </div>
 
+          {/* Email input */}
           <div>
             <label htmlFor="email" className="block text-gray-300 text-sm font-medium mb-1">
               Email Address
@@ -76,6 +87,7 @@ const Register = () => {
             />
           </div>
 
+          {/* Password input */}
           <div>
             <label htmlFor="password" className="block text-gray-300 text-sm font-medium mb-1">
               Password
@@ -92,6 +104,7 @@ const Register = () => {
             />
           </div>
 
+          {/* Submit button with loading spinner */}
           <button
             type="submit"
             disabled={isLoading}
@@ -111,6 +124,7 @@ const Register = () => {
           </button>
         </form>
 
+        {/* Link to login page */}
         <p className="text-gray-400 text-sm mt-6 text-center">
           Already have an account?{' '}
           <Link to="/login" className="text-white hover:underline font-medium">
