@@ -2,18 +2,22 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+// Login component – renders the sign‑in form
 const Login = () => {
+  // State for form fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const [error, setError] = useState('');         // holds error messages
+  const [isLoading, setIsLoading] = useState(false); // disables form during request
 
+  const { login } = useAuth();    // authentication function from context
+  const navigate = useNavigate(); // programmatic navigation
+
+  // Handle form submission
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
+    e.preventDefault();           // prevent page reload
+    setError('');                 // clear previous errors
+    setIsLoading(true);           // show loading state
 
     // Basic client-side validation
     if (!email || !password) {
@@ -23,9 +27,10 @@ const Login = () => {
     }
 
     try {
-      await login(email, password);
-      navigate('/'); // Redirect to home after successful login
+      await login(email, password); // call the login method
+      navigate('/');                // redirect to home on success
     } catch (err) {
+      // Display error from the server or a generic message
       setError(err.message || 'Login failed. Please try again.');
       setIsLoading(false);
     }
@@ -34,9 +39,11 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-black px-4">
       <div className="w-full max-w-md bg-gray-900 p-8 rounded-lg shadow-2xl">
+        {/* Brand and title */}
         <h1 className="text-4xl font-bold text-red-600 text-center mb-2">Cinevo</h1>
         <h2 className="text-2xl font-semibold text-white text-center mb-6">Sign In</h2>
 
+        {/* Error message display */}
         {error && (
           <div className="bg-red-500/20 border border-red-500 text-red-500 px-4 py-2 rounded mb-4 text-sm">
             {error}
@@ -44,6 +51,7 @@ const Login = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Email input */}
           <div>
             <label htmlFor="email" className="block text-gray-300 text-sm font-medium mb-1">
               Email Address
@@ -60,6 +68,7 @@ const Login = () => {
             />
           </div>
 
+          {/* Password input */}
           <div>
             <label htmlFor="password" className="block text-gray-300 text-sm font-medium mb-1">
               Password
@@ -76,6 +85,7 @@ const Login = () => {
             />
           </div>
 
+          {/* Submit button with loading spinner */}
           <button
             type="submit"
             disabled={isLoading}
@@ -95,6 +105,7 @@ const Login = () => {
           </button>
         </form>
 
+        {/* Link to registration page */}
         <p className="text-gray-400 text-sm mt-6 text-center">
           New to Cinevo?{' '}
           <Link to="/register" className="text-white hover:underline font-medium">
