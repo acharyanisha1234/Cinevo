@@ -31,8 +31,8 @@ const Home = () => {
         setTopRated(topRatedRes.results || []);
         setUpcoming(upcomingRes.results || []);
 
-        // Pick first trending with backdrop as featured
-        const hero = (trendingRes.results || []).find(m => m.backdrop_path) || 
+        // Featured: first trending with backdrop
+        const hero = (trendingRes.results || []).find(m => m.backdrop_path) ||
                      (trendingRes.results || [])[0];
         setFeatured(hero);
       } catch (err) {
@@ -49,9 +49,9 @@ const Home = () => {
   if (loading) {
     return (
       <div className="bg-black min-h-screen animate-pulse">
-        <div className="h-[80vh] w-full bg-gray-900" />
-        <div className="relative z-10 -mt-20 px-4 space-y-8 pb-10">
-          {[...Array(5)].map((_, i) => (
+        <div className="h-[85vh] w-full bg-gray-900" />
+        <div className="relative z-10 -mt-20 px-4 md:px-8 space-y-8 pb-10">
+          {[...Array(4)].map((_, i) => (
             <div key={i}>
               <div className="h-6 w-48 bg-gray-800 rounded mb-3" />
               <div className="flex gap-3 overflow-x-auto">
@@ -73,9 +73,9 @@ const Home = () => {
       <div className="bg-black min-h-screen flex items-center justify-center text-white">
         <div className="text-center">
           <p className="text-xl text-red-500">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-4 bg-red-600 px-6 py-2 rounded hover:bg-red-700"
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 bg-red-600 hover:bg-red-700 px-6 py-2 rounded-md font-semibold transition"
           >
             Retry
           </button>
@@ -86,7 +86,7 @@ const Home = () => {
 
   return (
     <div className="bg-black min-h-screen">
-      {/* Hero */}
+      {/* Hero - shows featured movie with backdrop */}
       {featured && <Hero movie={featured} />}
 
       {/* Movie Rows */}
