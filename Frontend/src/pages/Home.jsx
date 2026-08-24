@@ -1,75 +1,57 @@
 import React, { useState, useEffect } from 'react';
 import Hero from '../components/movie/Hero';
 import MovieRow from '../components/movie/MovieRow';
-
-// ---------- Dummy Data (more realistic) ----------
-const generateMovies = (count, offset = 0) =>
-  Array.from({ length: count }, (_, i) => ({
-    id: offset + i + 1,
-    title: `Movie ${offset + i + 1}`,
-    name: `Movie ${offset + i + 1}`,
-    overview: `This is the overview for movie ${offset + i + 1}. A fascinating story that will keep you on the edge of your seat.`,
-    poster_path: `https://picsum.photos/seed/${offset + i + 1}/300/450`,
-    backdrop_path: `https://picsum.photos/seed/${offset + i + 1}/1280/720`,
-    vote_average: (3 + Math.random() * 2).toFixed(1),
-    release_date: `202${Math.floor(Math.random() * 4)}-01-01`,
-  }));
-
-// Pre‑defined sets
-const trending = generateMovies(12, 100);
-const popular = generateMovies(12, 200);
-const topRated = generateMovies(12, 300);
-const continueWatching = generateMovies(6, 400);
-const myList = generateMovies(8, 500);
-const newReleases = generateMovies(10, 600);
-
-// Hero carousel slides (3 featured movies)
-const heroSlides = [
-  {
-    id: 999,
-    title: 'Dune: Part Two',
-    overview: 'Paul Atreides continues his journey to avenge his family and fulfill his destiny.',
-    backdrop_path: 'https://picsum.photos/seed/dune/1920/1080',
-  },
-  {
-    id: 998,
-    title: 'The Batman',
-    overview: 'When a sadistic serial killer begins murdering key political figures in Gotham, Batman is forced to investigate the city\'s hidden corruption.',
-    backdrop_path: 'https://picsum.photos/seed/batman/1920/1080',
-  },
-  {
-    id: 997,
-    title: 'Interstellar',
-    overview: 'A team of explorers travels through a wormhole in space in an attempt to ensure humanity\'s survival.',
-    backdrop_path: 'https://picsum.photos/seed/interstellar/1920/1080',
-  },
-];
+import { getTrending, getMovies } from '../services/api';
 
 const Home = () => {
-  const [currentSlide, setCurrentSlide] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [trending, setTrending] = useState([]);
+  const [nowPlaying, setNowPlaying] = useState([]);
+  const [popular, setPopular] = useState([]);
+  const [topRated, setTopRated] = useState([]);
+  const [upcoming, setUpcoming] = useState([]);
+  const [featured, setFeatured] = useState(null);
 
-  // Auto‑play carousel
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-    }, 6000);
-    return () => clearInterval(timer);
+    const fetchHomeData = async () => {
+      try {
+        const [trendingRes, nowPlayingRes, popularRes, topRatedRes, upcomingRes] =
+          await Promise.all([
+            getTrending('movie', 'week'),
+            getMovies('now_playing'),
+            getMovies('popular'),
+            getMovies('top_rated'),
+            getMovies('upcoming'),
+          ]);
+
+        setTrending(trendingRes.results || []);
+        setNowPlaying(nowPlayingRes.results || []);
+        setPopular(popularRes.results || []);
+        setTopRated(topRatedRes.results || []);
+        setUpcoming(upcomingRes.results || []);
+
+        // Pick first trending with backdrop as featured
+        const hero = (trendingRes.results || []).find(m => m.backdrop_path) || 
+                     (trendingRes.results || [])[0];
+        setFeatured(hero);
+      } catch (err) {
+        setError('Failed to load movies. Please try again.');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHomeData();
   }, []);
 
-  // Simulate loading (remove this when you fetch real data)
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // If still loading, show skeleton
   if (loading) {
     return (
       <div className="bg-black min-h-screen animate-pulse">
         <div className="h-[80vh] w-full bg-gray-900" />
         <div className="relative z-10 -mt-20 px-4 space-y-8 pb-10">
-          {[...Array(4)].map((_, i) => (
+          {[...Array(5)].map((_, i) => (
             <div key={i}>
               <div className="h-6 w-48 bg-gray-800 rounded mb-3" />
               <div className="flex gap-3 overflow-x-auto">
@@ -86,44 +68,34 @@ const Home = () => {
     );
   }
 
-  return (
-    <div className="bg-black min-h-screen">
-      {/* Hero Carousel */}
-      <div className="relative h-[85vh] w-full overflow-hidden">
-        {heroSlides.map((movie, index) => (
-          <div
-            key={movie.id}
-            className={`absolute inset-0 transition-opacity duration-1000 ${
-              index === currentSlide ? 'opacity-100' : 'opacity-0'
-            }`}
+  if (error) {
+    return (
+      <div className="bg-black min-h-screen flex items-center justify-center text-white">
+        <div className="text-center">
+          <p className="text-xl text-red-500">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 bg-red-600 px-6 py-2 rounded hover:bg-red-700"
           >
-            <Hero movie={movie} />
-          </div>
-        ))}
-        {/* Carousel Indicators */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-          {heroSlides.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentSlide(index)}
-              className={`w-3 h-3 rounded-full transition-all ${
-                index === currentSlide
-                  ? 'bg-white w-8'
-                  : 'bg-white/50 hover:bg-white/80'
-              }`}
-            />
-          ))}
+            Retry
+          </button>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="bg-black min-h-screen">
+      {/* Hero */}
+      {featured && <Hero movie={featured} />}
 
       {/* Movie Rows */}
       <div className="relative z-10 -mt-20 px-4 md:px-8 pb-10 space-y-8">
         <MovieRow title="🔥 Trending Now" movies={trending} seeAllLink="/trending" />
-        <MovieRow title="⭐ Popular Movies" movies={popular} seeAllLink="/movies" />
+        <MovieRow title="🎬 Now Playing" movies={nowPlaying} seeAllLink="/now-playing" />
+        <MovieRow title="⭐ Popular" movies={popular} seeAllLink="/popular" />
         <MovieRow title="🏆 Top Rated" movies={topRated} seeAllLink="/top-rated" />
-        <MovieRow title="⏳ Continue Watching" movies={continueWatching} seeAllLink="/continue" />
-        <MovieRow title="📋 My List" movies={myList} seeAllLink="/my-list" />
-        <MovieRow title="🆕 New Releases" movies={newReleases} seeAllLink="/new" />
+        <MovieRow title="📅 Upcoming" movies={upcoming} seeAllLink="/upcoming" />
       </div>
     </div>
   );
