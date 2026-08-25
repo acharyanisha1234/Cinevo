@@ -1,102 +1,104 @@
+// pages/Home.jsx
 import React, { useState, useEffect } from 'react';
 import Hero from '../components/movie/Hero';
 import MovieRow from '../components/movie/MovieRow';
-import { getTrending, getMovies } from '../services/api';
+import {
+  getTrending,
+  getPopular,
+  getTopRated,
+  getNowPlaying,
+  getUpcoming,
+} from '../services/movieService';
+import api from '../services/api';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const Home = () => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [trending, setTrending] = useState([]);
-  const [nowPlaying, setNowPlaying] = useState([]);
   const [popular, setPopular] = useState([]);
   const [topRated, setTopRated] = useState([]);
+  const [nowPlaying, setNowPlaying] = useState([]);
   const [upcoming, setUpcoming] = useState([]);
-  const [featured, setFeatured] = useState(null);
+  const [continueWatching, setContinueWatching] = useState([]);
+  const [myList, setMyList] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchHomeData = async () => {
+    const fetchAll = async () => {
       try {
-        const [trendingRes, nowPlayingRes, popularRes, topRatedRes, upcomingRes] =
-          await Promise.all([
-            getTrending('movie', 'week'),
-            getMovies('now_playing'),
-            getMovies('popular'),
-            getMovies('top_rated'),
-            getMovies('upcoming'),
-          ]);
+        // Fetch all movie lists in parallel
+        const [
+          trendingRes,
+          popularRes,
+          topRatedRes,
+          nowPlayingRes,
+          upcomingRes,
+          historyRes,
+          watchlistRes,
+        ] = await Promise.all([
+          getTrending(),
+          getPopular(),
+          getTopRated(),
+          getNowPlaying(),
+          getUpcoming(),
+          api.get('/history'),
+          api.get('/watchlist'),
+        ]);
 
-        setTrending(trendingRes.results || []);
-        setNowPlaying(nowPlayingRes.results || []);
-        setPopular(popularRes.results || []);
-        setTopRated(topRatedRes.results || []);
-        setUpcoming(upcomingRes.results || []);
+        setTrending(trendingRes.data.data.results || []);
+        setPopular(popularRes.data.data.results || []);
+        setTopRated(topRatedRes.data.data.results || []);
+        setNowPlaying(nowPlayingRes.data.data.results || []);
+        setUpcoming(upcomingRes.data.data.results || []);
 
-        // Featured: first trending with backdrop
-        const hero = (trendingRes.results || []).find(m => m.backdrop_path) ||
-                     (trendingRes.results || [])[0];
-        setFeatured(hero);
-      } catch (err) {
-        setError('Failed to load movies. Please try again.');
-        console.error(err);
+        // Continue Watching – fetch movie details for each history entry
+        const historyEntries = historyRes.data.data || [];
+        if (historyEntries.length > 0) {
+          const historyMovies = await Promise.all(
+            historyEntries.map((entry) =>
+              api.get(`/movies/${entry.movieId}`).then((res) => res.data.data)
+            )
+          );
+          setContinueWatching(historyMovies);
+        }
+
+        // My List (watchlist)
+        const watchlistEntries = watchlistRes.data.data || [];
+        if (watchlistEntries.length > 0) {
+          const listMovies = await Promise.all(
+            watchlistEntries.map((item) =>
+              api.get(`/movies/${item.movieId}`).then((res) => res.data.data)
+            )
+          );
+          setMyList(listMovies);
+        }
+      } catch (error) {
+        console.error('Error fetching home data:', error);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchHomeData();
+    fetchAll();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="bg-black min-h-screen animate-pulse">
-        <div className="h-[85vh] w-full bg-gray-900" />
-        <div className="relative z-10 -mt-20 px-4 md:px-8 space-y-8 pb-10">
-          {[...Array(4)].map((_, i) => (
-            <div key={i}>
-              <div className="h-6 w-48 bg-gray-800 rounded mb-3" />
-              <div className="flex gap-3 overflow-x-auto">
-                {[...Array(6)].map((_, j) => (
-                  <div key={j} className="flex-shrink-0 w-44">
-                    <div className="w-full h-64 bg-gray-800 rounded-lg" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-black min-h-screen flex items-center justify-center text-white">
-        <div className="text-center">
-          <p className="text-xl text-red-500">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 bg-red-600 hover:bg-red-700 px-6 py-2 rounded-md font-semibold transition"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <LoadingSpinner />;
 
   return (
-    <div className="bg-black min-h-screen">
-      {/* Hero - shows featured movie with backdrop */}
-      {featured && <Hero movie={featured} />}
+    <div className="bg-black text-white min-h-screen">
+      {/* Hero */}
+      <Hero movies={trending} />
 
       {/* Movie Rows */}
-      <div className="relative z-10 -mt-20 px-4 md:px-8 pb-10 space-y-8">
-        <MovieRow title="🔥 Trending Now" movies={trending} seeAllLink="/trending" />
-        <MovieRow title="🎬 Now Playing" movies={nowPlaying} seeAllLink="/now-playing" />
-        <MovieRow title="⭐ Popular" movies={popular} seeAllLink="/popular" />
-        <MovieRow title="🏆 Top Rated" movies={topRated} seeAllLink="/top-rated" />
-        <MovieRow title="📅 Upcoming" movies={upcoming} seeAllLink="/upcoming" />
-      </div>
+      {continueWatching.length > 0 && (
+        <MovieRow title="Continue Watching" movies={continueWatching} />
+      )}
+      {myList.length > 0 && (
+        <MovieRow title="My List" movies={myList} />
+      )}
+      <MovieRow title="Trending Now" movies={trending} />
+      <MovieRow title="Popular" movies={popular} />
+      <MovieRow title="Top Rated" movies={topRated} />
+      <MovieRow title="Now Playing" movies={nowPlaying} />
+      <MovieRow title="Upcoming" movies={upcoming} />
     </div>
   );
 };
