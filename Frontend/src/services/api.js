@@ -1,13 +1,17 @@
 import axios from 'axios';
-import { API_BASE, API_KEY } from '../utils/constants';
 
-export const api = axios.create({
-  baseURL: API_BASE,
-  params: { api_key: API_KEY, language: 'en-US' },
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  headers: { 'Content-Type': 'application/json' },
 });
 
-export const getTrending = (mediaType = 'all', timeWindow = 'week') =>
-  api.get(`/trending/${mediaType}/${timeWindow}`).then(res => res.data);
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-export const getMovies = (category = 'popular') =>
-  api.get(`/movie/${category}`).then(res => res.data);
+export default api;
