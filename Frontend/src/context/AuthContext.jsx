@@ -1,70 +1,76 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import api from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  // On mount, check localStorage for saved user
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch {
-        localStorage.removeItem('user');
-      }
+    const token = localStorage.getItem('token');
+    if (token) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      fetchUser();
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
-  // Mock login – replace with real API call later
-  const login = async (email, password) => {
-    setLoading(true);
+  const fetchUser = async () => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000)); // simulate network
-      if (!email || !password) throw new Error('All fields are required');
-
-      const userData = {
-        id: '1',
-        email,
-        name: email.split('@')[0],
-        avatar: `https://ui-avatars.com/api/?name=${email.split('@')[0]}&background=e50914&color=fff&size=128`,
-      };
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      return userData;
-    } catch (error) {
-      throw error;
+      const res = await api.get('/auth/me');
+      setUser(res.data.user);
+    } catch {
+      localStorage.removeItem('token');
+      delete api.defaults.headers.common['Authorization'];
+      setUser(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const login = async (email, password) => {
+    try {
+      const res = await api.post('/auth/login', { email, password });
+      if (res.data.success) {
+        const { token, ...userData } = res.data;
+        localStorage.setItem('token', token);
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        setUser(userData);
+        navigate('/');
+        return { success: true };
+      }
+      return { success: false, message: 'Login failed' };
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || 'Login error' };
     }
   };
 
   const register = async (name, email, password) => {
-    setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const userData = {
-        id: Date.now().toString(),
-        email,
-        name,
-        avatar: `https://ui-avatars.com/api/?name=${name}&background=e50914&color=fff&size=128`,
-      };
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      return userData;
+      const res = await api.post('/auth/register', { name, email, password });
+      if (res.data.success) {
+        const { token, ...userData } = res.data;
+        localStorage.setItem('token', token);
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        setUser(userData);
+        navigate('/');
+        return { success: true };
+      }
+      return { success: false, message: res.data.message || 'Registration failed' };
     } catch (error) {
-      throw error;
-    } finally {
-      setLoading(false);
+      return { success: false, message: error.response?.data?.message || 'Registration error' };
     }
   };
 
   const logout = () => {
+    localStorage.removeItem('token');
+    delete api.defaults.headers.common['Authorization'];
     setUser(null);
-    localStorage.removeItem('user');
+    navigate('/login');
   };
 
   const value = {
@@ -74,15 +80,10 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     isAuthenticated: !!user,
+    isAdmin: user?.role === 'admin',
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);
