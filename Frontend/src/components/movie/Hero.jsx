@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 // Hero component - displays a prominent movie banner with title, overview, and action buttons
