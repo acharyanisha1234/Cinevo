@@ -2,7 +2,14 @@ import axios from 'axios';
 
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 const API_KEY = process.env.TMDB_API_KEY;
-const tmdb = axios.create({ baseURL: TMDB_BASE, params: { api_key: API_KEY, language: 'en-US' } });
+
+const tmdb = axios.create({
+  baseURL: TMDB_BASE,
+  params: {
+    api_key: API_KEY,
+    language: 'en-US',
+  },
+});
 
 export const getGenres = async () => (await tmdb.get('/genre/movie/list')).data.genres;
 export const getTrending = (page = 1) => tmdb.get('/trending/movie/week', { params: { page } }).then(r => r.data);
