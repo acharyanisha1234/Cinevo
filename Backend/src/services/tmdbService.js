@@ -1,14 +1,19 @@
 import axios from 'axios';
 
 const TMDB_BASE = 'https://api.themoviedb.org/3';
-const API_KEY = process.env.TMDB_API_KEY;
+const ACCESS_TOKEN = process.env.TMDB_ACCESS_TOKEN;
+
+// Debug logs
+console.log(' tmdbService - ACCESS_TOKEN exists?', !!ACCESS_TOKEN);
+console.log(' tmdbService - Token starts with:', ACCESS_TOKEN?.substring(0, 20) || 'undefined');
 
 const tmdb = axios.create({
   baseURL: TMDB_BASE,
-  params: {
-    api_key: API_KEY,
-    language: 'en-US',
+  headers: {
+    Authorization: `Bearer ${ACCESS_TOKEN}`,
+    'Content-Type': 'application/json',
   },
+  params: { language: 'en-US' },
 });
 
 export const getGenres = async () => (await tmdb.get('/genre/movie/list')).data.genres;

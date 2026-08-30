@@ -1,5 +1,19 @@
-import express from 'express';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+
+// Get the directory name
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load .env from the Backend root folder BEFORE anything else
+dotenv.config({ path: resolve(__dirname, '../.env') });
+
+console.log('Loading .env from:', resolve(__dirname, '../.env'));
+console.log('TMDB_ACCESS_TOKEN:', process.env.TMDB_ACCESS_TOKEN ? 'Set' : 'Missing');
+console.log('TMDB_API_KEY:', process.env.TMDB_API_KEY ? 'Set' : 'Missing');
+
+import express from 'express';
 import cors from 'cors';
 import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
@@ -11,7 +25,7 @@ import ratingRoutes from './routes/ratingRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
 
-dotenv.config();
+// connectDB() will now have access to process.env
 connectDB();
 
 const app = express();
