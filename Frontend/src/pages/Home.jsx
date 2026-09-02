@@ -3,10 +3,9 @@ import { getTrending, getPopular, getTopRated, getNowPlaying, getUpcoming } from
 import Hero from '../components/movie/Hero';
 import MovieRow from '../components/movie/MovieRow';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import api, { normalizeMovie } from '../services/api';
 
 const Home = () => {
-  console.log('🏠 Home component rendering');
-  
   const [trending, setTrending] = useState([]);
   const [popular, setPopular] = useState([]);
   const [topRated, setTopRated] = useState([]);
@@ -15,70 +14,84 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    console.log('🔄 useEffect is running!');
-    
-    const fetchMovies = async () => {
-      console.log('📡 Starting movie fetches...');
-      try {
-        console.log('📡 Fetching trending...');
-        const trendingRes = await getTrending();
-        console.log('✅ Trending response:', trendingRes.data.data.results?.length || 0, 'movies');
-        
-        console.log('📡 Fetching popular...');
-        const popularRes = await getPopular();
-        console.log('✅ Popular response:', popularRes.data.data.results?.length || 0, 'movies');
-        
-        console.log('📡 Fetching top rated...');
-        const topRatedRes = await getTopRated();
-        console.log('✅ Top rated response:', topRatedRes.data.data.results?.length || 0, 'movies');
-        
-        console.log('📡 Fetching now playing...');
-        const nowPlayingRes = await getNowPlaying();
-        console.log('✅ Now playing response:', nowPlayingRes.data.data.results?.length || 0, 'movies');
-        
-        console.log('📡 Fetching upcoming...');
-        const upcomingRes = await getUpcoming();
-        console.log('✅ Upcoming response:', upcomingRes.data.data.results?.length || 0, 'movies');
+  const extractMovies = (res) => {
+    if (!res) return [];
+    if (Array.isArray(res.data)) return res.data;
+    if (res.data && Array.isArray(res.data.results)) return res.data.results;
+    if (res.data?.data && Array.isArray(res.data.data.results)) return res.data.data.results;
+    if (res.data?.data && Array.isArray(res.data.data)) return res.data.data;
+    return [];
+  };
 
-        setTrending(trendingRes.data.data.results || []);
-        setPopular(popularRes.data.data.results || []);
-        setTopRated(topRatedRes.data.data.results || []);
-        setNowPlaying(nowPlayingRes.data.data.results || []);
-        setUpcoming(upcomingRes.data.data.results || []);
-        
-        console.log('✅ All movies fetched successfully!');
+  useEffect(() => {
+    const fetchMovies = async () => {
+      try {
+        const [trendingRes, popularRes, topRatedRes, nowPlayingRes, upcomingRes] = await Promise.all([
+          getTrending().catch(() => ({ data: [] })),
+          getPopular().catch(() => ({ data: [] })),
+          getTopRated().catch(() => ({ data: [] })),
+          getNowPlaying().catch(() => ({ data: [] })),
+          getUpcoming().catch(() => ({ data: [] })),
+        ]);
+
+        const trendingData = extractMovies(trendingRes).map(normalizeMovie).filter(Boolean);
+        const popularData = extractMovies(popularRes).map(normalizeMovie).filter(Boolean);
+        const topRatedData = extractMovies(topRatedRes).map(normalizeMovie).filter(Boolean);
+        const nowPlayingData = extractMovies(nowPlayingRes).map(normalizeMovie).filter(Boolean);
+        const upcomingData = extractMovies(upcomingRes).map(normalizeMovie).filter(Boolean);
+
+        setTrending(trendingData);
+        setPopular(popularData);
+        setTopRated(topRatedData);
+        setNowPlaying(nowPlayingData);
+        setUpcoming(upcomingData);
+
         setLoading(false);
       } catch (err) {
-        console.error('❌ Error fetching movies:', err);
-        setError(err.message);
+        console.error('Error fetching movies:', err);
+        setError('Failed to fetch movies');
         setLoading(false);
       }
     };
-    
+
     fetchMovies();
   }, []);
 
-  if (loading) {
-    console.log('⏳ Showing loading spinner');
-    return <LoadingSpinner />;
-  }
+  if (loading) return <LoadingSpinner />;
 
   if (error) {
-    console.log('❌ Showing error:', error);
-    return <div className="text-red-500 text-center py-20">Error: {error}</div>;
+    return <div className="text-red-500 text-center py-20 font-semibold">Error: {error}</div>;
   }
-
-  console.log('✅ Rendering movies - trending:', trending.length, 'popular:', popular.length);
 
   return (
     <div className="bg-black text-white min-h-screen">
       <Hero movies={trending} />
-      <MovieRow title="Trending Now" movies={trending} />
-      <MovieRow title="Popular" movies={popular} />
-      <MovieRow title="Top Rated" movies={topRated} />
-      <MovieRow title="Now Playing" movies={nowPlaying} />
-      <MovieRow title="Upcoming" movies={upcoming} />
+      
+      <MovieRow 
+        title="Trending Now" 
+        movies={trending} 
+        category="trending"
+      />
+      <MovieRow 
+        title="Popular" 
+        movies={popular} 
+        category="popular"
+      />
+      <MovieRow 
+        title="Top Rated" 
+        movies={topRated} 
+        category="top-rated"
+      />
+      <MovieRow 
+        title="Now Playing" 
+        movies={nowPlaying} 
+        category="now-playing"
+      />
+      <MovieRow 
+        title="Upcoming" 
+        movies={upcoming} 
+        category="upcoming"
+      />
     </div>
   );
 };

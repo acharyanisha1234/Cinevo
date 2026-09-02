@@ -1,119 +1,380 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { getMovieDetails } from '../services/movieService';
-import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Play, Heart, Star, Calendar, Clock, Film, Info, ArrowLeft, Share2, Download } from 'lucide-react';
+import api, { normalizeMovie } from '../services/api';
+import { useFavorites } from '../context/FavoriteContext';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import RatingStars from '../components/common/RatingStars';
-import { Play, Plus, Heart, X, Calendar, Clock, Star } from 'lucide-react';
-import MovieGrid from '../components/movie/MovieGrid';
+import ShareModal from '../components/common/ShareModal';
 
 const MovieDetails = () => {
   const { id } = useParams();
-  const { user } = useAuth();
   const navigate = useNavigate();
+  const { toggleFavorite, isFavorite } = useFavorites();
+  
   const [movie, setMovie] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showTrailer, setShowTrailer] = useState(false);
-  const [userRating, setUserRating] = useState(null);
-  const [inWatchlist, setInWatchlist] = useState(false);
-  const [inFavorites, setInFavorites] = useState(false);
+  const [error, setError] = useState(null);
+  const [similarMovies, setSimilarMovies] = useState([]);
+  const [cast, setCast] = useState([]);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false); // New state
 
   useEffect(() => {
-    const fetchMovie = async () => {
+    const fetchMovieDetails = async () => {
       try {
-        const res = await getMovieDetails(id);
-        const data = res.data.data;
-        setMovie(data);
-        setUserRating(data.userRating || null);
-        setInWatchlist(data.inWatchlist || false);
-        setInFavorites(data.inFavorites || false);
-      } catch (error) { console.error(error); } finally { setLoading(false); }
+        setLoading(true);
+        setError(null);
+        
+        const res = await api.get(`/movies/${id}`);
+        console.log('Movie details response:', res.data);
+        
+        const movieData = res.data?.data || res.data;
+        const normalized = normalizeMovie(movieData);
+        
+        if (normalized) {
+          setMovie(normalized);
+        } else {
+          setError('Could not load movie details');
+        }
+        
+        try {
+          const similarRes = await api.get(`/movies/${id}/similar`);
+          const similarData = similarRes.data?.data || similarRes.data || [];
+          const normalizedSimilar = similarData.map(normalizeMovie).filter(Boolean);
+          setSimilarMovies(normalizedSimilar);
+        } catch (err) {
+          console.log('No similar movies found');
+        }
+        
+        try {
+          const castRes = await api.get(`/movies/${id}/cast`);
+          const castData = castRes.data?.data || castRes.data || [];
+          setCast(castData.slice(0, 10));
+        } catch (err) {
+          console.log('No cast found');
+        }
+        
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching movie details:', err);
+        setError(err.response?.data?.message || 'Failed to load movie details');
+        setLoading(false);
+      }
     };
-    fetchMovie();
+    
+    if (id) {
+      fetchMovieDetails();
+    }
   }, [id]);
 
-  const handleAddToWatchlist = async () => {
+  const handlePlay = () => {
+    if (movie) {
+      navigate(`/watch/${movie.id}`);
+    }
+  };
+
+  const handleFavorite = () => {
+    if (movie) {
+      toggleFavorite(movie);
+    }
+  };
+
+  const handleShare = () => {
+    setIsShareModalOpen(true);
+  };
+
+  const formatRuntime = (minutes) => {
+    if (!minutes) return 'N/A';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  };
+
+  const formatDate = (date) => {
+    if (!date) return 'N/A';
     try {
-      if (inWatchlist) { await api.delete(`/watchlist/${id}`); setInWatchlist(false); }
-      else { await api.post(`/watchlist/${id}`); setInWatchlist(true); }
-    } catch (error) { console.error(error); }
+      return new Date(date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch {
+      return date;
+    }
   };
 
-  const handleFavorite = async () => {
-    try {
-      if (inFavorites) { await api.delete(`/favorites/${id}`); setInFavorites(false); }
-      else { await api.post(`/favorites/${id}`); setInFavorites(true); }
-    } catch (error) { console.error(error); }
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
-  const handleRating = async (rating) => {
-    try { await api.post(`/ratings/${id}`, { rating }); setUserRating(rating); } catch (error) { console.error(error); }
-  };
+  if (error || !movie) {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6">
+        <div className="text-center max-w-md">
+          <Film size={64} className="text-red-600 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold mb-2">Movie Not Found</h2>
+          <p className="text-neutral-400 mb-6">{error || 'The movie you are looking for does not exist.'}</p>
+          <button
+            onClick={() => navigate('/')}
+            className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-lg transition-colors"
+          >
+            Back to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  if (loading) return <LoadingSpinner />;
-  if (!movie) return <div className="text-white p-8">Movie not found</div>;
+  const isFav = isFavorite(movie.id);
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <div className="relative h-[70vh] md:h-[80vh]">
-        <img src={movie.backdropPath ? `https://image.tmdb.org/t/p/original${movie.backdropPath}` : ''} alt={movie.title} className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-        <div className="absolute bottom-0 left-0 p-6 md:p-12 w-full md:w-2/3">
-          <h1 className="text-4xl md:text-6xl font-bold mb-2">{movie.title}</h1>
-          <div className="flex flex-wrap items-center gap-4 text-sm mb-4">
-            <span>{new Date(movie.releaseDate).getFullYear()}</span>
-            <span className="flex items-center"><Star size={16} className="fill-yellow-400 text-yellow-400 mr-1" />{movie.rating?.toFixed(1)}</span>
-            {movie.runtime && <span>{Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m</span>}
-            <span className="flex items-center"><Clock size={16} className="mr-1" /> {movie.status}</span>
-          </div>
-          <p className="text-gray-300 text-sm md:text-base max-w-2xl mb-4">{movie.overview}</p>
-          <div className="flex flex-wrap gap-4 items-center">
-            <button onClick={() => navigate(`/watch/${id}`)} className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-full flex items-center gap-2"><Play size={20} /> Play</button>
-            <button onClick={handleAddToWatchlist} className={`border rounded-full p-2.5 transition ${inWatchlist ? 'bg-red-600 border-red-600' : 'border-gray-400 hover:border-white'}`}><Plus size={20} /></button>
-            <button onClick={handleFavorite} className={`border rounded-full p-2.5 transition ${inFavorites ? 'bg-red-600 border-red-600' : 'border-gray-400 hover:border-white'}`}><Heart size={20} fill={inFavorites ? 'currentColor' : 'none'} /></button>
-            {movie.trailer && <button onClick={() => setShowTrailer(true)} className="border border-gray-400 hover:border-white rounded-full p-2.5 transition"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 3l12 7-12 7V3z" /></svg></button>}
+      {/* Back Button */}
+      <button
+        onClick={() => navigate(-1)}
+        className="fixed top-20 left-4 z-50 bg-black/60 backdrop-blur-sm hover:bg-black/80 p-2 rounded-full transition-colors"
+      >
+        <ArrowLeft size={24} />
+      </button>
+
+      {/* Hero Section */}
+      <div className="relative">
+        <div 
+          className="absolute inset-0 h-[70vh] bg-cover bg-center"
+          style={{
+            backgroundImage: `url(${movie.backdropPath || movie.posterPath})`,
+          }}
+        />
+        
+        <div className="absolute inset-0 h-[70vh] bg-gradient-to-r from-black via-black/60 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black to-transparent" />
+        
+        <div className="relative z-10 h-[70vh] flex items-end px-4 md:px-12 pb-12">
+          <div className="flex flex-col md:flex-row gap-8 max-w-7xl mx-auto w-full">
+            <div className="hidden md:block flex-shrink-0">
+              <img
+                src={movie.posterPath}
+                alt={movie.title}
+                className="w-64 rounded-lg shadow-2xl shadow-red-600/10"
+                onError={(e) => {
+                  e.target.src = 'https://via.placeholder.com/300x450/1a1a1a/ffffff?text=No+Poster';
+                }}
+              />
+            </div>
+            
+            <div className="flex-1">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
+                {movie.title}
+              </h1>
+              
+              <div className="flex flex-wrap items-center gap-4 text-sm text-neutral-300 mb-4">
+                {movie.year && (
+                  <span className="flex items-center gap-1">
+                    <Calendar size={16} />
+                    {movie.year}
+                  </span>
+                )}
+                {movie.rating && (
+                  <span className="flex items-center gap-1 text-yellow-500">
+                    <Star size={16} fill="currentColor" />
+                    {movie.rating}/10
+                  </span>
+                )}
+                {movie.runtime && (
+                  <span className="flex items-center gap-1">
+                    <Clock size={16} />
+                    {formatRuntime(movie.runtime)}
+                  </span>
+                )}
+                {movie.genres && movie.genres.length > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Film size={16} />
+                    {movie.genres.slice(0, 3).join(', ')}
+                  </span>
+                )}
+              </div>
+              
+              <p className="text-neutral-300 text-sm md:text-base max-w-2xl mb-6 line-clamp-3">
+                {movie.overview || 'No description available.'}
+              </p>
+              
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={handlePlay}
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-lg flex items-center gap-2 transition-all transform hover:scale-105"
+                >
+                  <Play size={20} fill="currentColor" />
+                  Play Now
+                </button>
+                
+                <button
+                  onClick={handleFavorite}
+                  className={`
+                    font-bold px-6 py-3 rounded-lg flex items-center gap-2 transition-all transform hover:scale-105
+                    ${isFav 
+                      ? 'bg-red-600/20 text-red-500 hover:bg-red-600/30' 
+                      : 'bg-neutral-800 text-white hover:bg-neutral-700'
+                    }
+                  `}
+                >
+                  <Heart size={20} className={isFav ? 'fill-red-500' : ''} />
+                  {isFav ? 'Favorited' : 'Add to Favorites'}
+                </button>
+                
+                {/* Share Button - Updated */}
+                <button
+                  onClick={handleShare}
+                  className="bg-neutral-800 hover:bg-neutral-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-all transform hover:scale-105"
+                >
+                  <Share2 size={20} />
+                  Share
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="md:col-span-2">
-            <h2 className="text-xl font-bold mb-2">Genres</h2>
-            <div className="flex flex-wrap gap-2 mb-4">{movie.genres.map(g => <span key={g} className="bg-gray-800 px-3 py-1 rounded-full text-sm">{g}</span>)}</div>
-            {movie.director && <p className="text-gray-400 text-sm mb-2"><span className="text-white">Director:</span> {movie.director}</p>}
-            {movie.cast && movie.cast.length > 0 && (
-              <div className="mt-4">
-                <h3 className="text-lg font-bold mb-2">Cast</h3>
-                <div className="flex flex-wrap gap-4">
-                  {movie.cast.slice(0,8).map(actor => (
-                    <div key={actor.id} className="text-center w-16">
-                      <img src={actor.profilePath ? `https://image.tmdb.org/t/p/w185${actor.profilePath}` : '/placeholder.jpg'} alt={actor.name} className="w-16 h-16 rounded-full object-cover mx-auto" />
-                      <p className="text-xs mt-1">{actor.name}</p>
-                      <p className="text-xs text-gray-400">{actor.character}</p>
+
+      {/* Rest of the component remains same... */}
+      <div className="max-w-7xl mx-auto px-4 md:px-12 py-8">
+        {/* Tabs */}
+        <div className="flex gap-6 border-b border-neutral-800 mb-6">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`pb-2 px-1 transition-colors ${
+              activeTab === 'overview' 
+                ? 'text-red-500 border-b-2 border-red-500' 
+                : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('cast')}
+            className={`pb-2 px-1 transition-colors ${
+              activeTab === 'cast' 
+                ? 'text-red-500 border-b-2 border-red-500' 
+                : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            Cast
+          </button>
+          <button
+            onClick={() => setActiveTab('similar')}
+            className={`pb-2 px-1 transition-colors ${
+              activeTab === 'similar' 
+                ? 'text-red-500 border-b-2 border-red-500' 
+                : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            Similar Movies
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        <div className="min-h-[200px]">
+          {activeTab === 'overview' && (
+            <div className="space-y-4">
+              <p className="text-neutral-300 leading-relaxed">
+                {movie.overview || 'No description available for this movie.'}
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                <div className="bg-neutral-900 p-4 rounded-lg">
+                  <p className="text-neutral-400 text-sm">Release Date</p>
+                  <p className="font-medium">{formatDate(movie.releaseDate)}</p>
+                </div>
+                <div className="bg-neutral-900 p-4 rounded-lg">
+                  <p className="text-neutral-400 text-sm">Runtime</p>
+                  <p className="font-medium">{formatRuntime(movie.runtime)}</p>
+                </div>
+                {movie.genres && movie.genres.length > 0 && (
+                  <div className="bg-neutral-900 p-4 rounded-lg">
+                    <p className="text-neutral-400 text-sm">Genres</p>
+                    <p className="font-medium">{movie.genres.join(', ')}</p>
+                  </div>
+                )}
+                {movie.rating && (
+                  <div className="bg-neutral-900 p-4 rounded-lg">
+                    <p className="text-neutral-400 text-sm">Rating</p>
+                    <p className="font-medium text-yellow-500">⭐ {movie.rating}/10</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'cast' && (
+            <div>
+              {cast.length === 0 ? (
+                <p className="text-neutral-400">No cast information available.</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {cast.map((person, index) => (
+                    <div key={index} className="bg-neutral-900 p-4 rounded-lg text-center">
+                      <div className="w-20 h-20 rounded-full bg-neutral-800 mx-auto mb-2 flex items-center justify-center">
+                        <span className="text-2xl font-bold text-neutral-600">
+                          {person.name ? person.name.charAt(0) : '?'}
+                        </span>
+                      </div>
+                      <p className="font-medium text-sm truncate">{person.name || 'Unknown'}</p>
+                      <p className="text-xs text-neutral-400 truncate">{person.character || 'N/A'}</p>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
-          <div>
-            <h3 className="text-lg font-bold mb-2">Your Rating</h3>
-            <RatingStars rating={userRating || 0} onRate={handleRating} />
-            {userRating ? <p className="text-sm text-gray-400 mt-1">You rated {userRating} stars</p> : <p className="text-sm text-gray-400 mt-1">Rate this movie</p>}
-          </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'similar' && (
+            <div>
+              {similarMovies.length === 0 ? (
+                <p className="text-neutral-400">No similar movies found.</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {similarMovies.slice(0, 10).map((similar) => (
+                    <Link
+                      key={similar.id}
+                      to={`/movie/${similar.id}`}
+                      className="group cursor-pointer"
+                    >
+                      <div className="bg-neutral-900 rounded-lg overflow-hidden transition-transform group-hover:scale-105">
+                        <img
+                          src={similar.posterPath}
+                          alt={similar.title}
+                          className="w-full aspect-[2/3] object-cover"
+                          onError={(e) => {
+                            e.target.src = 'https://via.placeholder.com/300x450/1a1a1a/ffffff?text=No+Poster';
+                          }}
+                        />
+                        <div className="p-2">
+                          <p className="text-sm font-medium truncate group-hover:text-red-500 transition-colors">
+                            {similar.title}
+                          </p>
+                          <p className="text-xs text-neutral-400">{similar.year || 'N/A'}</p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
-        {movie.recommendations && movie.recommendations.length > 0 && <MovieGrid movies={movie.recommendations} title="Recommendations" />}
-        {movie.similar && movie.similar.length > 0 && <MovieGrid movies={movie.similar} title="Similar Movies" />}
       </div>
-      {showTrailer && movie.trailer && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-          <div className="relative w-full max-w-4xl aspect-video bg-black">
-            <button className="absolute top-2 right-2 text-white bg-black/70 rounded-full p-1 hover:bg-red-600 transition" onClick={() => setShowTrailer(false)}><X size={28} /></button>
-            <iframe src={`https://www.youtube.com/embed/${movie.trailer}?autoplay=1`} className="w-full h-full" allow="autoplay; encrypted-media" allowFullScreen title="Trailer" />
-          </div>
-        </div>
-      )}
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        movie={movie}
+        url={`${window.location.origin}/movie/${movie.id}`}
+      />
     </div>
   );
 };

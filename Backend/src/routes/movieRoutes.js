@@ -1,16 +1,26 @@
 import express from 'express';
-import { getTrending, getPopular, getTopRated, getNowPlaying, getUpcoming, getMovieDetails, searchMovies, getMoviesByGenre, getAllGenres } from '../controllers/movieController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import {
+  getAllMovies,
+  getTrendingMovies,
+  getPopularMovies,
+  getTopRatedMovies,
+  getNowPlayingMovies,
+  getUpcomingMovies,
+  getAllGenres,
+  searchMovies,
+  getMovieById,
+} from '../controllers/movieController.js';
+
 const router = express.Router();
 
-router.get('/trending', getTrending);
-router.get('/popular', getPopular);
-router.get('/top-rated', getTopRated);
-router.get('/now-playing', getNowPlaying);
-router.get('/upcoming', getUpcoming);
+router.get('/', getAllMovies);
+router.get('/trending', getTrendingMovies);
+router.get('/popular', getPopularMovies);
+router.get('/top-rated', getTopRatedMovies);
+router.get('/now-playing', getNowPlayingMovies);
+router.get('/upcoming', getUpcomingMovies);
 router.get('/genres', getAllGenres);
-router.get('/genre/:genreId', getMoviesByGenre);
 router.get('/search', searchMovies);
-router.get('/:id', protect, getMovieDetails);
+router.get('/:id', getMovieById);
 
 export default router;
